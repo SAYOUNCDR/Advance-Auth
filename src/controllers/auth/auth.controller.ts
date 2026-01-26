@@ -1,4 +1,4 @@
-import { registerSchema } from "./auth.schema";
+import { registerSchema, loginSchema } from "./auth.schema";
 import { Request, Response } from "express";
 import { User } from "../../models/user.model";
 import { hashPassword } from "../../lib/hash";
@@ -87,5 +87,17 @@ export async function verifyEmailHandler(req: Request, res: Response) {
         return res.status(200).json({ message: "Email verified successfully" });
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
+    }
+}
+
+export async function loginHandler(req: Request, res: Response) {
+    try {
+        const result = loginSchema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({ message: "Invalid data", error: result.error.flatten() });
+        }
+        const { email, password } = result.data;
+    } catch (error) {
+        
     }
 }

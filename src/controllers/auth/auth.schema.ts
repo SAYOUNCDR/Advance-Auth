@@ -12,3 +12,9 @@ export const registerSchema = z.object({
         .regex(/[^A-Za-z0-9]/, "Must contain one special character"),
 })
 
+
+export const loginSchema = z.object({
+    email: z.string().trim().toLowerCase().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters long")
+        .max(32, "Password must be at most 32 characters long"),
+})
