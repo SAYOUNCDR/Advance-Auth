@@ -11,7 +11,7 @@ app.use(cookieParser());
 
 // Sample route
 app.get('/health', (req, res) => {
-    res.status(200).send('OK');
+    res.status(200).send('Server is healthy');
 });
 
 export default app;
