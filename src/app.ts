@@ -1,5 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import { registerHandler } from './controllers/auth/auth.controller';
 
 
 
@@ -13,5 +14,8 @@ app.use(cookieParser());
 app.get('/health', (req, res) => {
     res.status(200).send('Server is healthy');
 });
+
+
+app.post("/register", registerHandler);
 
 export default app;
