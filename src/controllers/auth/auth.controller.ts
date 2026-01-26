@@ -1,7 +1,7 @@
 import { registerSchema, loginSchema } from "./auth.schema";
 import { Request, Response } from "express";
 import { User } from "../../models/user.model";
-import { hashPassword } from "../../lib/hash";
+import { hashPassword, comparePassword } from "../../lib/hash";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../lib/email";
 
@@ -97,6 +97,15 @@ export async function loginHandler(req: Request, res: Response) {
             return res.status(400).json({ message: "Invalid data", error: result.error.flatten() });
         }
         const { email, password } = result.data;
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const isPasswordValid = await comparePassword(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Invalid password" });
+        }
     } catch (error) {
         
     }
