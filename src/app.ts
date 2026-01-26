@@ -14,7 +14,7 @@ app.get('/health', (req, res) => {
     res.status(200).send('Server is healthy');
 });
 
-app.use("/api/auth", authRouter);
+app.use("/auth", authRouter);
 
 
 export default app;
