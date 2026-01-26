@@ -44,7 +44,8 @@ export async function registerHandler(req: Request, res: Response) {
         await sendEmail(
             email,
             "Verify your email",
-            `Please click on the link below to verify your email: <a href="${verifyUrl}">Verify Email</a>`
+            `<p>Please click on the link below to verify your email:</p>
+            <p><a href="${verifyUrl}">Verify Email</a></p>`
         );
 
         return res.status(201).json({
@@ -60,4 +61,31 @@ export async function registerHandler(req: Request, res: Response) {
         return res.status(500).json({ message: "Internal server error", error });
     }
 
+}
+
+export async function verifyEmailHandler(req: Request, res: Response) {
+    const token = req.query.token as string || undefined;
+
+    if (!token) {
+        return res.status(400).json({ message: "Invalid token" });
+    }
+
+    try {
+        const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as {
+            id: string;
+        };
+
+        const user = await User.findById(payload.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        if (user.isEmailVerified) {
+            return res.status(400).json({ message: "Email already verified" });
+        }
+        user.isEmailVerified = true;
+        await user.save();
+        return res.status(200).json({ message: "Email verified successfully" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
 }
