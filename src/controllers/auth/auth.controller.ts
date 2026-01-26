@@ -4,6 +4,7 @@ import { User } from "../../models/user.model";
 import { hashPassword, comparePassword } from "../../lib/hash";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../lib/email";
+import { generateAccessToken, generateRefreshToken } from "../../lib/token";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
@@ -106,7 +107,34 @@ export async function loginHandler(req: Request, res: Response) {
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid password" });
         }
-    } catch (error) {
+
+        if(!user.isEmailVerified){
+            return res.status(401).json({ message: "Please verify your email before logging in" });
+        }
+
+        const accessToken = generateAccessToken(String(user._id), user.role, user.tokenVersion);
+        const refreshToken = generateRefreshToken(String(user._id), user.tokenVersion);
         
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({
+            message: "Login successful",
+            accessToken,
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isEmailVerified: user.isEmailVerified,
+                twoFactorEnabled: user.twoFactorEnabled,
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
     }
 }
