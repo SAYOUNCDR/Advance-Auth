@@ -1,10 +1,14 @@
 import { registerSchema, loginSchema } from "./auth.schema";
+import { sendEmail } from "../../lib/email";
 import { Request, Response } from "express";
 import { User } from "../../models/user.model";
 import { hashPassword, comparePassword } from "../../lib/hash";
+import {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyRefreshToken,
+} from "../../lib/token";
 import jwt from "jsonwebtoken";
-import { sendEmail } from "../../lib/email";
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../lib/token";
 import crypto from "crypto";
 
 function getAppUrl() {
@@ -18,7 +22,9 @@ export async function registerHandler(req: Request, res: Response) {
     try {
         const result = registerSchema.safeParse(req.body);
         if (!result.success) {
-            return res.status(400).json({ message: "Invalid data", error: result.error.flatten() });
+            return res
+                .status(400)
+                .json({ message: "Invalid data", error: result.error.flatten() });
         }
         const { name, email, password } = result.data;
 
@@ -39,7 +45,11 @@ export async function registerHandler(req: Request, res: Response) {
         });
 
         // Email verification logic
-        const verifyToken = jwt.sign({ id: newUser._id }, process.env.JWT_ACCESS_SECRET!, { expiresIn: "1d" });
+        const verifyToken = jwt.sign(
+            { id: newUser._id },
+            process.env.JWT_ACCESS_SECRET!,
+            { expiresIn: "1d" },
+        );
 
         const verifyUrl = `${getAppUrl()}/auth/verify-email?token=${verifyToken}`;
 
@@ -47,26 +57,25 @@ export async function registerHandler(req: Request, res: Response) {
             email,
             "Verify your email",
             `<p>Please click on the link below to verify your email:</p>
-            <p><a href="${verifyUrl}">Verify Email</a></p>`
+            <p><a href="${verifyUrl}">Verify Email</a></p>`,
         );
 
         return res.status(201).json({
-            message: "User registered successfully", user: {
+            message: "User registered successfully",
+            user: {
                 name,
                 email,
                 role: newUser.role,
                 isEmailVerified: newUser.isEmailVerified,
-            }
+            },
         });
-
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
-
 }
 
 export async function verifyEmailHandler(req: Request, res: Response) {
-    const token = req.query.token as string || undefined;
+    const token = (req.query.token as string) || undefined;
 
     if (!token) {
         return res.status(400).json({ message: "Invalid token" });
@@ -96,7 +105,9 @@ export async function loginHandler(req: Request, res: Response) {
     try {
         const result = loginSchema.safeParse(req.body);
         if (!result.success) {
-            return res.status(400).json({ message: "Invalid data", error: result.error.flatten() });
+            return res
+                .status(400)
+                .json({ message: "Invalid data", error: result.error.flatten() });
         }
         const { email, password } = result.data;
 
@@ -110,18 +121,27 @@ export async function loginHandler(req: Request, res: Response) {
         }
 
         if (!user.isEmailVerified) {
-            return res.status(401).json({ message: "Please verify your email before logging in" });
+            return res
+                .status(401)
+                .json({ message: "Please verify your email before logging in" });
         }
 
-        const accessToken = generateAccessToken(String(user._id), user.role, user.tokenVersion);
-        const refreshToken = generateRefreshToken(String(user._id), user.tokenVersion);
+        const accessToken = generateAccessToken(
+            String(user._id),
+            user.role,
+            user.tokenVersion,
+        );
+        const refreshToken = generateRefreshToken(
+            String(user._id),
+            user.tokenVersion,
+        );
 
         const isProduction = process.env.NODE_ENV === "production";
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: isProduction,
             sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         return res.status(200).json({
@@ -133,13 +153,12 @@ export async function loginHandler(req: Request, res: Response) {
                 role: user.role,
                 isEmailVerified: user.isEmailVerified,
                 twoFactorEnabled: user.twoFactorEnabled,
-            }
+            },
         });
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
 }
-
 
 export async function refreshHandler(req: Request, res: Response) {
     try {
@@ -162,15 +181,22 @@ export async function refreshHandler(req: Request, res: Response) {
             return res.status(401).json({ message: "Invalid refresh token" });
         }
 
-        const newAccessToken = generateAccessToken(String(user._id), user.role, user.tokenVersion);
+        const newAccessToken = generateAccessToken(
+            String(user._id),
+            user.role,
+            user.tokenVersion,
+        );
 
-        const newRefreshToken = generateRefreshToken(String(user._id), user.tokenVersion);
+        const newRefreshToken = generateRefreshToken(
+            String(user._id),
+            user.tokenVersion,
+        );
         const isProduction = process.env.NODE_ENV === "production";
         res.cookie("refreshToken", newRefreshToken, {
             httpOnly: true,
             secure: isProduction,
             sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         return res.status(200).json({
@@ -182,14 +208,12 @@ export async function refreshHandler(req: Request, res: Response) {
                 role: user.role,
                 isEmailVerified: user.isEmailVerified,
                 twoFactorEnabled: user.twoFactorEnabled,
-            }
+            },
         });
-
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
 }
-
 
 // Note For frontend after the cookie is cleared the user should redirect to login page
 // Another important Note: This logout handler is not fullproof as if cookie is stolen and user logs out from current device but attacker has refresh token to generate new access token and refresh token and can access the protected routes
@@ -208,7 +232,10 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
         const normalizedEmail = email.toLowerCase().trim();
         const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
-            return res.json({ message: "If an account with this email exists, we'll send you a link to reset your password." });
+            return res.json({
+                message:
+                    "If an account with this email exists, we'll send you a link to reset your password.",
+            });
         }
 
         const rawToken = crypto.randomBytes(32).toString("hex");
@@ -222,12 +249,53 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
         await sendEmail(
             user.email,
             "Reset Password",
-            `Click <a href="${resetUrl}">here</a> to reset your password`
-        )
+            `Click <a href="${resetUrl}">here</a> to reset your password`,
+        );
 
-        return res.json({ message: "If an account with this email exists, we'll send you a link to reset your password." });
+        return res.json({
+            message:
+                "If an account with this email exists, we'll send you a link to reset your password.",
+        });
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
+}
 
+export async function resetPasswordHandler(req: Request, res: Response) {
+    const { token, password } = req.body as { token: string; password: string };
+    if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+    }
+    if (!password || password.length < 6) {
+        return res.status(400).json({
+            message: "Password is required and must be at least 6 characters long",
+        });
+    }
+    const user = await User.findOne({ resetPasswordToken: token });
+    if (!user) {
+        return res.status(400).json({ message: "Invalid token" });
+    }
+
+    try {
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+        const user = await User.findOne({
+            resetPasswordToken: tokenHash,
+            resetPasswordExpires: { $gt: Date.now() }, // this is to check if the token is expired
+        });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid token" });
+        }
+
+        const newPasswordHash = await hashPassword(password);
+        user.password = newPasswordHash;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.tokenVersion += 1; // this is to invalidate all the previous tokens
+        await user.save();
+
+        return res.json({ message: "Password reset successful" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
 }
