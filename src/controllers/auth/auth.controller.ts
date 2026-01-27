@@ -161,6 +161,28 @@ export async function refreshHandler(req: Request, res: Response) {
             return res.status(401).json({ message: "Invalid refresh token" });
         }
 
+        const newAccessToken = generateAccessToken(String(user._id), user.role, user.tokenVersion);
+
+        const newRefreshToken = generateRefreshToken(String(user._id), user.tokenVersion);
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({
+            message: "Refresh token successful",
+            accessToken: newAccessToken,
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isEmailVerified: user.isEmailVerified,
+                twoFactorEnabled: user.twoFactorEnabled,
+            }
+        });
 
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
