@@ -200,3 +200,17 @@ export async function logOutHandler(req: Request, res: Response) {
         return res.status(500).json({ message: "Internal server error", error });
     }
 }
+
+export async function forgotPasswordHandler(req: Request, res: Response) {
+    const { email } = req.body as { email: string };
+    try {
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user) {
+            return res.json({ message: "If an account with this email exists, we'll send you a link to reset your password." });
+        }
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+
+}
