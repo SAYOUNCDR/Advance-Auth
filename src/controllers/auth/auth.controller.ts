@@ -189,6 +189,9 @@ export async function refreshHandler(req: Request, res: Response) {
     }
 }
 
+
+// Note For frontend after the cookie is cleared the user should redirect to login page
+// Another important Note: This logout handler is not fullproof as if cookie is stolen and user logs out from current device but attacker has refresh token to generate new access token and refresh token and can access the protected routes
 export async function logOutHandler(req: Request, res: Response) {
     try {
         res.clearCookie("refreshToken", { path: "/" });
