@@ -16,3 +16,16 @@ export function generateRefreshToken(userId: string, tokenVersion: number) {
     }
     return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, { expiresIn: "7d" });
 }
+
+
+export function verifyRefreshToken(token: string) {
+    try {
+        const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as {
+            id: string;
+            tokenVersion: number;
+        };
+        return payload;
+    } catch (error) {
+        return null;
+    }
+}

@@ -108,13 +108,13 @@ export async function loginHandler(req: Request, res: Response) {
             return res.status(401).json({ message: "Invalid password" });
         }
 
-        if(!user.isEmailVerified){
+        if (!user.isEmailVerified) {
             return res.status(401).json({ message: "Please verify your email before logging in" });
         }
 
         const accessToken = generateAccessToken(String(user._id), user.role, user.tokenVersion);
         const refreshToken = generateRefreshToken(String(user._id), user.tokenVersion);
-        
+
         const isProduction = process.env.NODE_ENV === "production";
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
@@ -134,6 +134,15 @@ export async function loginHandler(req: Request, res: Response) {
                 twoFactorEnabled: user.twoFactorEnabled,
             }
         });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+}
+
+
+export async function refreshHandler(req: Request, res: Response) {
+    try {
+
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
