@@ -4,7 +4,7 @@ import { User } from "../../models/user.model";
 import { hashPassword, comparePassword } from "../../lib/hash";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../lib/email";
-import { generateAccessToken, generateRefreshToken } from "../../lib/token";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../lib/token";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
@@ -142,6 +142,25 @@ export async function loginHandler(req: Request, res: Response) {
 
 export async function refreshHandler(req: Request, res: Response) {
     try {
+        const token = req.cookies?.refreshToken as string | undefined;
+
+        if (!token) {
+            return res.status(401).json({ message: "Refresh token missing" });
+        }
+        const payload = verifyRefreshToken(token);
+        if (!payload) {
+            return res.status(401).json({ message: "Invalid refresh token" });
+        }
+
+        const user = await User.findById(payload.id);
+
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+        if (user.tokenVersion !== payload.tokenVersion) {
+            return res.status(401).json({ message: "Invalid refresh token" });
+        }
+
 
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
