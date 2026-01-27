@@ -188,3 +188,12 @@ export async function refreshHandler(req: Request, res: Response) {
         return res.status(500).json({ message: "Internal server error", error });
     }
 }
+
+export async function logOutHandler(req: Request, res: Response) {
+    try {
+        res.clearCookie("refreshToken", { path: "/" });
+        return res.status(200).json({ message: "Logout successful" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+}
