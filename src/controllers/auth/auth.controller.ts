@@ -5,6 +5,7 @@ import { hashPassword, comparePassword } from "../../lib/hash";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../lib/email";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../lib/token";
+import crypto from "crypto";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
@@ -209,6 +210,22 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
         if (!user) {
             return res.json({ message: "If an account with this email exists, we'll send you a link to reset your password." });
         }
+
+        const rawToken = crypto.randomBytes(32).toString("hex");
+        const token = crypto.createHash("sha256").update(rawToken).digest("hex");
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+        await user.save();
+
+        const resetUrl = `${getAppUrl()}/auth/reset-password?token=${token}`;
+
+        await sendEmail(
+            user.email,
+            "Reset Password",
+            `Click <a href="${resetUrl}">here</a> to reset your password`
+        )
+
+        return res.json({ message: "If an account with this email exists, we'll send you a link to reset your password." });
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
