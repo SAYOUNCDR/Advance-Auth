@@ -3,7 +3,7 @@ import { verifyAccessToken } from "../lib/token";
 import { User } from "../models/user.model";
 
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -45,3 +45,5 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         return res.status(401).json({ message: "Unauthorized! You are not authenticated" });
     }
 }
+
+export default requireAuth;
