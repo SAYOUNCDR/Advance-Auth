@@ -244,7 +244,7 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
         user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
         await user.save();
 
-        const resetUrl = `${getAppUrl()}/auth/reset-password?token=${token}`;
+        const resetUrl = `${getAppUrl()}/auth/reset-password?token=${rawToken}`;
 
         await sendEmail(
             user.email,
@@ -271,10 +271,7 @@ export async function resetPasswordHandler(req: Request, res: Response) {
             message: "Password is required and must be at least 6 characters long",
         });
     }
-    const user = await User.findOne({ resetPasswordToken: token });
-    if (!user) {
-        return res.status(400).json({ message: "Invalid token" });
-    }
+
 
     try {
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
