@@ -10,12 +10,24 @@ import {
 } from "../../lib/token";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
         return `http://localhost:${process.env.PORT}`;
     }
     return process.env.APP_URL! || `http://localhost:${process.env.PORT}`;
+}
+
+function getGoogleClinet() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+    if (!clientId || !clientSecret || !redirectUri) {
+        throw new Error("Google client ID, client secret, or redirect URI not found");
+    }
+    return new OAuth2Client({ clientId, clientSecret, redirectUri });
 }
 
 export async function registerHandler(req: Request, res: Response) {
@@ -292,6 +304,109 @@ export async function resetPasswordHandler(req: Request, res: Response) {
         await user.save();
 
         return res.json({ message: "Password reset successful" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+}
+
+
+export async function googleAuthStartHandler(req: Request, res: Response) {
+    try {
+        const client = getGoogleClinet();
+        const url = client.generateAuthUrl({
+            access_type: "offline",
+            prompt: "consent",
+            scope: ["openid", "profile", "email"],
+        });
+        return res.redirect(url);
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+}
+
+export async function googleAuthcallbackHandler(req: Request, res: Response) {
+    try {
+        const code = req.query.code as string | undefined;
+        if (!code) {
+            return res.status(400).json({ message: "Code is required" });
+        }
+        try {
+            const client = getGoogleClinet();
+
+            const { tokens } = await client.getToken(code);
+
+            if (!tokens.id_token) {
+                return res.status(400).json({ message: "Invalid code" });
+            }
+
+            const ticket = await client.verifyIdToken({
+                idToken: tokens.id_token,
+                audience: process.env.GOOGLE_CLIENT_ID as string,
+            });
+
+            const payload = ticket.getPayload();
+            if (!payload) {
+                return res.status(400).json({ message: "Invalid token" });
+            }
+
+            const email = payload?.email;
+            const emailVerified = payload?.email_verified;
+
+            if (!email || !emailVerified) {
+                return res.status(400).json({ message: "Google email account not verified" });
+            }
+
+            const normalizedEmail = email.toLowerCase().trim();
+            const name = payload.name || `${payload.given_name || ""} ${payload.family_name || ""}`.trim() || "User";
+
+            let user = await User.findOne({ email: normalizedEmail });
+            if (!user) {
+                const randomPassword = crypto.randomBytes(16).toString("hex");
+                const hashedPassword = await hashPassword(randomPassword);
+                user = new User({
+                    name,
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                    role: "user",
+                    isEmailVerified: true,
+                    twoFactorEnabled: false,
+                });
+                await user.save();
+            } else {
+                if (!user.isEmailVerified) {
+                    user.isEmailVerified = true;
+                    await user.save();
+                }
+            }
+
+            const accessToken = generateAccessToken(user.id, user.role as "user" | "admin", user.tokenVersion);
+            const refreshToken = generateRefreshToken(user.id, user.tokenVersion);
+
+
+            const isProduction = process.env.NODE_ENV === "production";
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: "strict",
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+
+            return res.status(200).json({
+                message: "Google Login successful",
+                accessToken,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    isEmailVerified: user.isEmailVerified,
+                },
+            });
+
+
+        } catch (error) {
+            return res.status(500).json({ message: "Internal server error", error });
+        }
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
