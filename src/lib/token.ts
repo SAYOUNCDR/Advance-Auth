@@ -9,6 +9,19 @@ export function generateAccessToken(userId: string, role: "user" | "admin", toke
     return jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, { expiresIn: "30min" });
 }
 
+export function verifyAccessToken(token: string) {
+    try {
+        return jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as {
+            id: string;
+            role: "user" | "admin";
+            tokenVersion: number;
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
+
 export function generateRefreshToken(userId: string, tokenVersion: number) {
     const payload = {
         id: userId,
