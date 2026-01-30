@@ -7,7 +7,7 @@
 ![JWT](https://img.shields.io/badge/JWT-black?style=flat&logo=JSON%20web%20tokens)
 ![Zod](https://img.shields.io/badge/zod-%233068b7.svg?style=flat&logo=zod&logoColor=white)
 
-> **A robust, production-ready authentication template built with Node.js, Express, and TikTok-ready security practices.**
+> **A robust, production-ready authentication template built with Node.js, Express, and Best security practices.**
 
 ## 🚀 Features
 
@@ -16,8 +16,8 @@ This template comes packed with modern authentication and authorization features
 - **🔐 Secure Authentication**: Complete Login and Registration flows using HTTP-only cookies and bcrypt password hashing.
 - **🛡️ RBAC (Role-Based Access Control)**: Granular permissions system to manage User and Admin roles effectively.
 - **🎫 JWT Session Management**: Secure Access and Refresh Token rotation strategy for persistent and safe user sessions.
-- **🔑 OAuth Integration**: (Coming Soon) Seamless login with Google, GitHub, and other providers.
-- **📱 2FA (Two-Factor Authentication)**: (Coming Soon) Add an extra layer of security with TOTP-based two-factor authentication.
+- **🔑 OAuth Integration**: Seamless login with **Google**.
+- **📱 2FA (Two-Factor Authentication)**: Add an extra layer of security with TOTP-based two-factor authentication (Google Authenticator).
 - **📧 Email Verification**: Verify user identities upon registration to prevent spam.
 - **🔄 Password Management**: Secure "Forgot Password" and "Reset Password" flows with email notifications.
 - **🛡️ Security First**: Implements best practices like Rate Limiting, Helmet, and Data Sanitization.
@@ -33,6 +33,7 @@ Built with a focus on performance, type safety, and scalability:
 - **Validation**: [Zod](https://zod.dev/)
 - **Authentication**: [JsonWebToken](https://github.com/auth0/node-jsonwebtoken) & [Bcrypt.js](https://github.com/dcodeIO/bcrypt.js)
 - **Email**: [Nodemailer](https://nodemailer.com/)
+- **2FA**: [otplib](https://github.com/yeojz/otplib)
 
 ## 🏁 Getting Started
 
@@ -50,8 +51,8 @@ Ensure you have the following installed:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/advance-auth.git
-   cd advance-auth
+   git clone https://github.com/SAYOUNCDR/Advance-Auth.git
+   cd Advance-Auth
    ```
 
 2. **Install dependencies**
@@ -80,6 +81,11 @@ Ensure you have the following installed:
    SMTP_USER=your_email@example.com
    SMTP_PASS=your_email_password
    EMAIL_FROM=no-reply@example.com
+
+   # Google OAuth
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
 
    # Application URL
    APP_URL=http://localhost:5000
@@ -113,13 +119,17 @@ Brief overview of the main authentication routes:
 | `GET`  | `/auth/verify-email`    | Verify user email address                |
 | `POST` | `/auth/forgot-password` | Request password reset link              |
 | `POST` | `/auth/reset-password`  | Set a new password                       |
+| `GET`  | `/auth/google`          | Initiate Google OAuth flow               |
+| `GET`  | `/auth/google/callback` | Google OAuth callback URL                |
+| `POST` | `/auth/2fa/setup`       | Generate 2FA secret and QR code          |
+| `POST` | `/auth/2fa/verify`      | Verify 2FA token and enable 2FA          |
 
 ## 🗺️ Roadmap
 
 - [x] Basic Auth (Register/Login/Logout)
 - [x] Email Verification & Password Reset
-- [ ] OAuth Strategies (Google/GitHub)
-- [ ] Two-Factor Authentication (2FA)
+- [x] OAuth Strategies (Google)
+- [x] Two-Factor Authentication (2FA)
 - [ ] Admin Dashboard for User Management
 
 ## 🤝 Contributing
