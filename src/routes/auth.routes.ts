@@ -9,7 +9,8 @@ import {
     resetPasswordHandler,
     googleAuthStartHandler,
     googleAuthcallbackHandler,
-    twoFASetupHandler
+    twoFASetupHandler,
+    twoFAVerifyHandler
 } from "../controllers/auth/auth.controller";
 
 import requireAuth from "../middleware/requireAuth"
@@ -27,5 +28,6 @@ router.post("/reset-password", resetPasswordHandler)
 router.get("/google", googleAuthStartHandler)
 router.get("/google/callback", googleAuthcallbackHandler)
 router.post("/2fa/setup", requireAuth, twoFASetupHandler)
+router.post("/2fa/verify", requireAuth, twoFAVerifyHandler)
 
 export default router

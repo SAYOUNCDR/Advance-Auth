@@ -498,7 +498,10 @@ export async function twoFAVerifyHandler(req: Request, res: Response) {
             return res.status(400).json({ message: "Invalid code" });
         }
 
-        return res.status(200).json({ message: "2FA verification successful" });
+        user.twoFactorEnabled = true;
+        await user.save();
+
+        return res.status(200).json({ message: "2FA verification successful", twoFactorEnabled: true});
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
