@@ -142,12 +142,20 @@ export async function loginHandler(req: Request, res: Response) {
 
         if (user.twoFactorEnabled) {
             if (!twoFactorCode || typeof twoFactorCode !== 'string') {
-                res.status(400).json({ message: "2FA code is required" });
+                return res.status(400).json({ message: "2FA code is required" });
             }
             if (!user.twoFactorSecret) {
-                res.status(400).json({ message: "2FA misconfigured" });
+                return res.status(400).json({ message: "2FA misconfigured" });
             }
 
+            const isValidCode = await verify({
+                secret: user.twoFactorSecret,
+                token: twoFactorCode
+            });
+
+            if (!isValidCode) {
+                return res.status(400).json({ message: "Invalid 2FA code" });
+            }
         }
 
         const accessToken = generateAccessToken(
