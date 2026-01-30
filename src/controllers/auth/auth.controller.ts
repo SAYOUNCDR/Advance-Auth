@@ -11,6 +11,7 @@ import {
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
+import { generateSecret, generate, verify, generateURI} from "otplib";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
@@ -121,7 +122,7 @@ export async function loginHandler(req: Request, res: Response) {
                 .status(400)
                 .json({ message: "Invalid data", error: result.error.flatten() });
         }
-        const { email, password } = result.data;
+        const { email, password, twoFactorCode } = result.data;
 
         const user = await User.findOne({ email });
         if (!user) {
@@ -136,6 +137,17 @@ export async function loginHandler(req: Request, res: Response) {
             return res
                 .status(401)
                 .json({ message: "Please verify your email before logging in" });
+        }
+
+
+        if (user.twoFactorEnabled) {
+            if (!twoFactorCode || typeof twoFactorCode !== 'string') {
+                res.status(400).json({ message: "2FA code is required" });
+            }
+            if (!user.twoFactorSecret) {
+                res.status(400).json({ message: "2FA misconfigured" });
+            }
+
         }
 
         const accessToken = generateAccessToken(
@@ -410,4 +422,48 @@ export async function googleAuthcallbackHandler(req: Request, res: Response) {
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
+}
+
+
+export async function twoFASetupHandler(req: Request, res: Response) {
+    const authReq = req as any;
+    const authUser = authReq.user;
+
+    if (!authUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+        const user = await User.findById(authUser.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.twoFactorEnabled) {
+            return res.status(400).json({ message: "2FA is already enabled" });
+        }
+
+        const secret = generateSecret();
+        const issuer = "NodeAdvanceAuthApp";
+
+        const otpAuthUrl = generateURI({
+            secret,
+            label: user.email,
+            issuer,
+        });
+
+        user.twoFactorSecret = secret;
+        user.twoFactorEnabled = true;
+        await user.save();
+
+        return res.status(200).json({
+            message: "2FA setup successful",
+            otpAuthUrl,
+            secret,
+        });
+
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+
 }
