@@ -148,10 +148,14 @@ export async function loginHandler(req: Request, res: Response) {
                 return res.status(400).json({ message: "2FA misconfigured" });
             }
 
-            const isValidCode = await verify({
+            const verificationResult: any = await verify({
                 secret: user.twoFactorSecret,
                 token: twoFactorCode
             });
+
+            const isValidCode = typeof verificationResult === 'object' && verificationResult !== null
+                ? verificationResult.valid
+                : verificationResult;
 
             if (!isValidCode) {
                 return res.status(400).json({ message: "Invalid 2FA code" });
@@ -497,10 +501,14 @@ export async function twoFAVerifyHandler(req: Request, res: Response) {
             return res.status(400).json({ message: "2FA is not enabled" });
         }
 
-        const isValid = await verify({
+        const verificationResult: any = await verify({
             secret: user.twoFactorSecret,
             token: code as string
         });
+
+        const isValid = typeof verificationResult === 'object' && verificationResult !== null
+            ? verificationResult.valid
+            : verificationResult;
 
         if (!isValid) {
             return res.status(400).json({ message: "Invalid code" });
