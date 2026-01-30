@@ -11,7 +11,7 @@ import {
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import { generateSecret, generate, verify, generateURI} from "otplib";
+import { generateSecret, generate, verify, generateURI } from "otplib";
 
 function getAppUrl() {
     if (process.env.NODE_ENV === "development") {
@@ -453,7 +453,7 @@ export async function twoFASetupHandler(req: Request, res: Response) {
         });
 
         user.twoFactorSecret = secret;
-        user.twoFactorEnabled = true;
+        user.twoFactorEnabled = false;
         await user.save();
 
         return res.status(200).json({
@@ -465,5 +465,41 @@ export async function twoFASetupHandler(req: Request, res: Response) {
     } catch (error) {
         return res.status(500).json({ message: "Internal server error", error });
     }
+}
 
+export async function twoFAVerifyHandler(req: Request, res: Response) {
+    const authReq = req as any;
+    const authUser = authReq.user;
+
+    if (!authUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const code = req.body.code as { code?: string };
+    if (!code) {
+        return res.status(400).json({ message: "Code is required" });
+    }
+    try {
+        const user = await User.findById(authUser.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+            return res.status(400).json({ message: "2FA is not enabled" });
+        }
+
+        const isValid = await verify({
+            secret: user.twoFactorSecret,
+            token: code.code as string
+        });
+
+        if (!isValid) {
+            return res.status(400).json({ message: "Invalid code" });
+        }
+
+        return res.status(200).json({ message: "2FA verification successful" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error", error });
+    }
 }
