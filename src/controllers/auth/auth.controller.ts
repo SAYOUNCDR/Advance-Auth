@@ -151,12 +151,14 @@ export async function loginHandler(req: Request, res: Response) {
             const verificationResult: any = await verify({
                 secret: user.twoFactorSecret,
                 token: twoFactorCode
-            });
+            }); // This returns an object with valid and epoch properties example { valid: true, epoch: 1738222222 }
+            // What is epoch? It is the number of seconds since the Unix epoch (January 1, 1970, 00:00:00 UTC).
 
             const isValidCode = typeof verificationResult === 'object' && verificationResult !== null
                 ? verificationResult.valid
-                : verificationResult;
+                : verificationResult; // This returns true or false, true if the code is valid, false otherwise
 
+            // This checks if the 2FA code is valid
             if (!isValidCode) {
                 return res.status(400).json({ message: "Invalid 2FA code" });
             }
