@@ -485,7 +485,7 @@ export async function twoFAVerifyHandler(req: Request, res: Response) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+        if (!user.twoFactorSecret) {
             return res.status(400).json({ message: "2FA is not enabled" });
         }
 
